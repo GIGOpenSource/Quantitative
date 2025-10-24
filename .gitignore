@@ -9,8 +9,8 @@ venv/
 env/
 ENV/
 
-flashCiclevenv/
-flashCircle_venv/
+QuantEnv/
+
 # Django
 db.sqlite3
 *.sqlite3

@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'App'
 ]
 
 MIDDLEWARE = [
@@ -118,5 +119,24 @@ STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
+import os
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+POSTGRES_HOST = os.getenv('POSTGRES_HOST') or os.getenv('DB_HOST') or "192.168.77.222"
+if POSTGRES_HOST:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'QuanT'),
+            'USER': os.getenv('POSTGRES_USER', 'clipai'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'clipai'),
+            'HOST': os.getenv('POSTGRES_HOST', '192.168.77.222'),
+            'PORT': os.getenv('POSTGRES_PORT', '5436'),
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
