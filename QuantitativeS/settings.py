@@ -9,12 +9,12 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 from pathlib import Path
+from datetime import timedelta, datetime
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -27,6 +27,15 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# 日志目录
+LOG_DIR = BASE_DIR / 'logs'
+
+CurrentDayLog = LOG_DIR / str(datetime.now())[:10]
+
+if not LOG_DIR.exists():
+    LOG_DIR.mkdir()
+if not CurrentDayLog.exists():
+    CurrentDayLog.mkdir()
 
 # Application definition
 
@@ -69,17 +78,28 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'QuantitativeS.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+POSTGRES_HOST = os.getenv('POSTGRES_HOST') or os.getenv('DB_HOST') or "192.168.77.222"
+if POSTGRES_HOST:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'QuanT'),
+            'USER': os.getenv('POSTGRES_USER', 'clipai'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'clipai'),
+            'HOST': POSTGRES_HOST,
+            'PORT': os.getenv('POSTGRES_PORT', '5436'),
+        }
     }
-}
-
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -99,7 +119,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
@@ -111,7 +130,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
@@ -119,24 +137,63 @@ STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-import os
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-POSTGRES_HOST = os.getenv('POSTGRES_HOST') or os.getenv('DB_HOST') or "192.168.77.222"
-if POSTGRES_HOST:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB', 'QuanT'),
-            'USER': os.getenv('POSTGRES_USER', 'clipai'),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'clipai'),
-            'HOST': os.getenv('POSTGRES_HOST', '192.168.77.222'),
-            'PORT': os.getenv('POSTGRES_PORT', '5436'),
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '[%(asctime)s][%(threadName)s:%(thread)d][task_id:%(name)s][%(filename)s:%(lineno)d]'
+                      '[%(levelname)s][%(message)s]'
+        },
+        'simple': {
+            'format': '[%(levelname)s][%(asctime)s][%(filename)s:%(lineno)d]%(message)s'
         }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+    },
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'info': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': CurrentDayLog / f'{str(datetime.now())[:10]}_info.log',
+            'maxBytes': 1024 * 1024 * 50,
+            'backupCount': 3,
+            'formatter': 'standard',
+            'encoding': 'utf-8',
+        },
+
+        'error': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': CurrentDayLog / f'{str(datetime.now())[:10]}_error.log',
+            'maxBytes': 1024 * 1024 * 5,
+            'backupCount': 5,
+            'formatter': 'standard',
+            'encoding': 'utf-8',
+        },
+
+    },
+    'loggers': {
+        '': {
+            'handlers': ['info', 'console', 'error'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'collect': {
+            'handlers': ['console'],
+            'level': 'INFO',
         }
-    }
+    },
+}
